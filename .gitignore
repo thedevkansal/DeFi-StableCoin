@@ -14,5 +14,3 @@ docs/
 .env
 
 lib/
-
-test/unit/DSCEngineTest.t.sol
