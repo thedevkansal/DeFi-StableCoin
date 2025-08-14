@@ -1,7 +1,7 @@
 //SPDX-License-Identifier:MIT
 pragma solidity ^0.8.19;
 
-import {Test} from "forge-std/Test.sol" ;
+import {Test} from "forge-std/Test.sol";
 import {DSCEngine} from "../../src/DSCEngine.sol";
 import {DecentralizedStableCoin} from "../../src/DSC.sol";
 import {DeployDSC} from "../../script/DeployDSC.s.sol";
@@ -10,7 +10,6 @@ import {ERC20Mock} from "../mocks/ERC20Mock.sol";
 import {MockV3Aggregator} from "../mocks/MockV3Aggregator.sol";
 
 contract DSCEngineTest is Test {
-
     DSCEngine public dscEngine;
     DecentralizedStableCoin public dsc;
     DeployDSC public deployDSC;
@@ -29,15 +28,12 @@ contract DSCEngineTest is Test {
     uint256 public constant AMOUNT_DSC_MINTED = 500e18;
     uint256 public constant REDEEM_AMOUNT = 0.5 ether;
 
-
     function setUp() public {
         deployDSC = new DeployDSC();
         (dsc, dscEngine, config) = deployDSC.run();
-        (wethUsdPriceFeed, wbtcUsdPriceFeed, weth, wbtc, deployerKey) =
-            config.activeNetworkConfig();
+        (wethUsdPriceFeed, wbtcUsdPriceFeed, weth, wbtc, deployerKey) = config.activeNetworkConfig();
         ERC20Mock(weth).mint(user, STARTING_ERC20_BALANCE);
     }
-
 
     /////////////////////////////////////////////
     ///////////DEPOSIT COLLATERAL TESTS//////////
@@ -86,7 +82,7 @@ contract DSCEngineTest is Test {
     // If your liquidation threshold is 50% (i.e., 200% collateralization), the user should only be able to mint up to $1,000 DSC.
     // Minting 1000 DSC ($1000 if DSC is $1) should not revert, but minting 2,000 DSC
 
-    function testMintDSCRevertsIfHealthFactorIsTooLow() public DepositedCollateral(){
+    function testMintDSCRevertsIfHealthFactorIsTooLow() public DepositedCollateral {
         vm.startPrank(user);
         // uint256 expectedHealthFactor = dscEngine.getHealthFactor(user);
         uint256 collateralValue = dscEngine.getAccountCollateralValue(user);
@@ -94,10 +90,7 @@ contract DSCEngineTest is Test {
         uint256 threshold = (collateralValue * 50) / 100; // 50% threshold
         uint256 expectedHealthFactor = (threshold * 1e18) / minted;
         vm.expectRevert(
-            abi.encodeWithSelector(
-                DSCEngine.DSCEngine__HealthFactorBelowThreshold.selector,
-                expectedHealthFactor
-            )
+            abi.encodeWithSelector(DSCEngine.DSCEngine__HealthFactorBelowThreshold.selector, expectedHealthFactor)
         );
         dscEngine.mintDSC(2000e18); // This should fail due to low health factor
         vm.stopPrank();
@@ -112,7 +105,7 @@ contract DSCEngineTest is Test {
         vm.stopPrank();
     }
 
-    function testMintDSCUpdatesHealthFactor() public HasMintedDSC() {
+    function testMintDSCUpdatesHealthFactor() public HasMintedDSC {
         vm.startPrank(user);
         uint256 initialHealthFactor = dscEngine.getHealthFactor(user);
         dscEngine.mintDSC(AMOUNT_DSC_MINTED);
@@ -153,12 +146,9 @@ contract DSCEngineTest is Test {
         uint256 redeemAmountInUSD = dscEngine.getPriceInUSD(weth, 0.9 ether); // Redeem 0.9 WETH
         uint256 collateralValueAfterRedeem = initialCollateralValue - redeemAmountInUSD;
         uint256 threshold = (collateralValueAfterRedeem * 50) / 100; // 50% threshold
-        uint256 expectedHealthFactor = (threshold * 1e18) / AMOUNT_DSC_MINTED; 
+        uint256 expectedHealthFactor = (threshold * 1e18) / AMOUNT_DSC_MINTED;
         vm.expectRevert(
-            abi.encodeWithSelector(
-                DSCEngine.DSCEngine__HealthFactorBelowThreshold.selector,
-                expectedHealthFactor
-            )
+            abi.encodeWithSelector(DSCEngine.DSCEngine__HealthFactorBelowThreshold.selector, expectedHealthFactor)
         );
         dscEngine.redeemCollateral(weth, 0.9 ether);
         vm.stopPrank();
@@ -179,7 +169,11 @@ contract DSCEngineTest is Test {
         uint256 redeemAmountInUSD = dscEngine.getPriceInUSD(weth, REDEEM_AMOUNT);
         dscEngine.redeemCollateral(weth, REDEEM_AMOUNT);
         uint256 newCollateralValue = dscEngine.getAccountCollateralValue(user);
-        assertEq(newCollateralValue, initialCollateralValue - redeemAmountInUSD, "Collateral value should decrease after redeeming collateral");
+        assertEq(
+            newCollateralValue,
+            initialCollateralValue - redeemAmountInUSD,
+            "Collateral value should decrease after redeeming collateral"
+        );
         vm.stopPrank();
     }
 
@@ -194,10 +188,10 @@ contract DSCEngineTest is Test {
     /////////// BURN DSC TESTS///////////////////
     /////////////////////////////////////////////
 
-    function testBurnDSCUpdatesDSCBalance() public HasMintedDSC(){
+    function testBurnDSCUpdatesDSCBalance() public HasMintedDSC {
         vm.startPrank(user);
         uint256 initialDSCBalance = dsc.balanceOf(user);
-        uint256 amountToBurn = AMOUNT_DSC_MINTED ;
+        uint256 amountToBurn = AMOUNT_DSC_MINTED;
         dsc.approve(address(dscEngine), amountToBurn);
         dscEngine.burnDSC(amountToBurn);
         uint256 newDSCBalance = dsc.balanceOf(user);
@@ -213,10 +207,10 @@ contract DSCEngineTest is Test {
         vm.stopPrank();
     }
 
-    function testBurnDSCUpdatesHealthFactor() public HasMintedDSC() {
+    function testBurnDSCUpdatesHealthFactor() public HasMintedDSC {
         vm.startPrank(user);
         uint256 initialHealthFactor = dscEngine.getHealthFactor(user);
-        uint256 amountToBurn = AMOUNT_DSC_MINTED / 2; 
+        uint256 amountToBurn = AMOUNT_DSC_MINTED / 2;
         dsc.approve(address(dscEngine), amountToBurn);
         dscEngine.burnDSC(amountToBurn);
         uint256 newHealthFactor = dscEngine.getHealthFactor(user);
@@ -232,12 +226,9 @@ contract DSCEngineTest is Test {
         vm.startPrank(liquidator);
         uint256 userHealthFactor = dscEngine.getHealthFactor(user);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                DSCEngine.DSCEngine__HealthFactorAboveThreshold.selector,
-                userHealthFactor
-            )
+            abi.encodeWithSelector(DSCEngine.DSCEngine__HealthFactorAboveThreshold.selector, userHealthFactor)
         );
-        dscEngine.liquidate(weth, user, AMOUNT_DSC_MINTED); 
+        dscEngine.liquidate(weth, user, AMOUNT_DSC_MINTED);
         vm.stopPrank();
     }
 
@@ -247,7 +238,7 @@ contract DSCEngineTest is Test {
         dsc.transfer(liquidator, AMOUNT_DSC_MINTED);
         vm.stopPrank(); // End the prank on `user` from the modifier.
 
-        uint256 LiquidationAmount = AMOUNT_DSC_MINTED ; // Amount of LiquidationAmount
+        uint256 LiquidationAmount = AMOUNT_DSC_MINTED; // Amount of LiquidationAmount
         // Make the user's position unhealthy by dropping the collateral price
         // Initial WETH price is $2000. User has 1 WETH ($2000) and 500 DSC debt. HF = 2.
         // To make HF < 1, collateral value must be < $1000. We set WETH price to $999.
@@ -257,7 +248,7 @@ contract DSCEngineTest is Test {
         // Get initial balances for the liquidator
         uint256 liquidatorInitialWethBalance = ERC20Mock(weth).balanceOf(liquidator);
         uint256 liquidatorInitialDscBalance = dsc.balanceOf(liquidator);
-        (,uint256 userInitialCollateralValueInUSD,) = dscEngine.getAccountInformation(user);
+        (, uint256 userInitialCollateralValueInUSD,) = dscEngine.getAccountInformation(user);
 
         // Liquidator approves the engine and liquidates the user
         vm.startPrank(liquidator);
@@ -268,7 +259,7 @@ contract DSCEngineTest is Test {
         // Check final states
         uint256 liquidatorFinalWethBalance = ERC20Mock(weth).balanceOf(liquidator);
         uint256 liquidatorFinalDscBalance = dsc.balanceOf(liquidator);
-        (uint256 userFinalDscMinted,uint256 userFinalCollateralValueInUSD,) = dscEngine.getAccountInformation(user);
+        (uint256 userFinalDscMinted, uint256 userFinalCollateralValueInUSD,) = dscEngine.getAccountInformation(user);
 
         // 1. Liquidator's DSC balance should decrease by the debt they covered.
         assertEq(liquidatorFinalDscBalance, liquidatorInitialDscBalance - LiquidationAmount);
@@ -292,7 +283,6 @@ contract DSCEngineTest is Test {
     // but the liquidation would not improve the user's health factor.
     // This happens when the user's collateralization is very low, close to the liquidation bonus.
     function testLiquidateRevertsIfHealthFactorNotImproved() public HasMintedDSC {
-
         dsc.transfer(liquidator, AMOUNT_DSC_MINTED);
         vm.stopPrank(); // End the prank on `user` from the modifier.
 
@@ -316,10 +306,10 @@ contract DSCEngineTest is Test {
         assertEq(expectedTokenAmount, 5e17); // 1 WETH = $2000, so $1000 = 0.5 WETH
     }
 
-    function testGetPriceInUSD() public view{
+    function testGetPriceInUSD() public view {
         uint256 ethamount = 5e18;
         uint256 priceInUSD = dscEngine.getPriceInUSD(weth, ethamount);
-        assertEq(priceInUSD, 5e18*2000);
+        assertEq(priceInUSD, 5e18 * 2000);
     }
 
     function testGetCollateralValueInUSD() public DepositedCollateral {
@@ -362,10 +352,10 @@ contract DSCEngineTest is Test {
         uint256 initialDscBalance = dsc.balanceOf(user);
 
         ERC20Mock(weth).approve(address(dscEngine), collateralToDeposit);
-        dscEngine.depositCollateralAndMintDSC(weth, collateralToDeposit, dscToMint);     
+        dscEngine.depositCollateralAndMintDSC(weth, collateralToDeposit, dscToMint);
 
         uint256 finalCollateral = dscEngine.getUserCollateralDeposited(user, weth);
-        uint256 finalDscBalance = dsc.balanceOf(user);  
+        uint256 finalDscBalance = dsc.balanceOf(user);
 
         assertEq(finalCollateral, initialCollateral + collateralToDeposit);
         assertEq(finalDscBalance, initialDscBalance + dscToMint);
